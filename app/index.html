@@ -95,14 +95,12 @@
 
 <div class="container">
 
-    <h1>🌦 Weather AI Dashboard</h1>
+   <h1>🌦 Weather AI Dashboard</h1>
 
-    <input type="text" id="city" placeholder="Enter city">
-    <button onclick="getWeather()">Search</button>
+<input type="text" id="city" placeholder="Enter city">
+<button onclick="getWeather()">Search</button>
 
-    <div class="card" id="result">
-        Search weather to see results 🌍
-    </div>
+<div id="result">Search weather to see results 🌍</div>
 
     <h2>📊 Weather History</h2>
 
@@ -128,6 +126,11 @@ const API = "https://weather-ai-dashboard.onrender.com";
 
 async function getWeather() {
     let city = document.getElementById("city").value;
+
+    if (!city) {
+        alert("Please enter city");
+        return;
+    }
 
     let res = await fetch(`${API}/weather?city=${city}`);
     let data = await res.json();
@@ -157,6 +160,9 @@ async function loadHistory() {
 }
 
 loadHistory();
+</script>
+<script>
+console.log("JS loaded");
 </script>
 
 </body>
