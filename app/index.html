@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Weather AI Dashboard</title>
+
+<style>
+:root {
+  --bg1:#0f172a; --bg2:#1e293b; --accent:#22c55e; --accent2:#38bdf8;
+}
+* { box-sizing: border-box; }
+body {
+  margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto;
+  color:#e5e7eb;
+  background: radial-gradient(1200px 600px at 10% 0%, #1f2937 0%, transparent 60%),
+              linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+
+.header {
+  padding: 24px 16px 8px; text-align:center;
+}
+.header h1 { margin:0; font-size:2.2rem; letter-spacing:.5px; }
+.header p { margin:6px 0 0; opacity:.7; }
+
+.search {
+  display:flex; gap:10px; justify-content:center; padding: 16px;
+}
+.search input {
+  width:260px; padding:12px 14px; border-radius:12px; border:1px solid #334155;
+  background:#0b1220; color:#e5e7eb; outline:none;
+}
+.search button {
+  padding:12px 16px; border-radius:12px; border:none; cursor:pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color:#052e16; font-weight:600;
+}
+.search button:active { transform: translateY(1px); }
+
+.container {
+  display:flex; justify-content:center; gap:16px; flex-wrap:wrap; padding: 8px 16px 0;
+}
+
+.card {
+  width:260px; padding:18px; border-radius:18px;
+  background: rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.card:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+
+.row { display:flex; align-items:center; justify-content:space-between; }
+.city { font-size:1.1rem; opacity:.9; }
+.temp { font-size:2.4rem; font-weight:700; }
+.meta { margin-top:6px; opacity:.8; font-size:.95rem; }
+
+.icon {
+  font-size:2rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,.4));
+}
+
+.loading {
+  display:none; text-align:center; padding:10px; opacity:.8;
+}
+
+.table-wrap { padding: 10px 16px 28px; }
+.table {
+  width:100%; max-width:900px; margin:0 auto; border-collapse: collapse;
+  background: rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px; overflow:hidden;
+}
+.table th, .table td {
+  padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.08);
+  text-align:left;
+}
+.table th { background: rgba(255,255,255,.06); font-weight:600; }
+.table tr:hover { background: rgba(255,255,255,.05); }
+
+.badge {
+  padding:4px 8px; border-radius:999px; font-size:.8rem;
+  background: rgba(34,197,94,.15); color:#86efac; border:1px solid rgba(34,197,94,.25);
+}
+
+.footer { text-align:center; opacity:.6; padding-bottom:16px; font-size:.9rem; }
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <h1>🌦 Weather AI Dashboard</h1>
+  <p>Real-time weather + history</p>
+</div>
+
+<div class="search">
+  <input id="city" placeholder="Enter city (e.g., Pune)" />
+  <button onclick="getWeather()">Search</button>
+</div>
+
+<div class="loading" id="loading">Fetching weather...</div>
+
+<div class="container" id="cards"></div>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>City</th>
+        <th>Temp</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="history"></tbody>
+  </table>
+</div>
+
+<div class="footer">Built with FastAPI • SQLite • JS</div>
+
+<script>
+function iconFor(desc) {
+  const d = (desc || "").toLowerCase();
+  if (d.includes("rain")) return "🌧️";
+  if (d.includes("cloud")) return "☁️";
+  if (d.includes("clear")) return "☀️";
+  if (d.includes("storm")) return "⛈️";
+  return "🌤️";
+}
+
+function formatTime(t) {
+  try {
+    const dt = new Date(t);
+    return dt.toLocaleString();
+  } catch {
+    return t;
+  }
+}
+
+async function getWeather() {
+  const city = document.getElementById("city").value || "Pune";
+  const loading = document.getElementById("loading");
+  loading.style.display = "block";
+
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/weather?city=${encodeURIComponent(city)}`);
+    const data = await res.json();
+
+    const cards = document.getElementById("cards");
+    cards.innerHTML = `
+      <div class="card">
+        <div class="row">
+          <div class="city">${data.city}</div>
+          <div class="icon">${iconFor(data.condition || "")}</div>
+        </div>
+        <div class="temp">${Math.round(data.temperature)}°C</div>
+        <div class="meta">
+          <span class="badge">${data.condition || "weather"}</span>
+        </div>
+      </div>
+    `;
+    await loadHistory();
+  } catch (e) {
+    alert("Failed to fetch weather");
+  } finally {
+    loading.style.display = "none";
+  }
+}
+
+async function loadHistory() {
+  const res = await fetch("http://127.0.0.1:8000/history");
+  const data = await res.json();
+
+  const tbody = document.getElementById("history");
+  tbody.innerHTML = "";
+
+  data.forEach(d => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.city}</td>
+      <td>${Math.round(d.temperature)}°C</td>
+      <td>${formatTime(d.time)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// initial load
+loadHistory();
+</script>
+
+</body>
+</html>
